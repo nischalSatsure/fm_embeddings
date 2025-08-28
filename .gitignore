@@ -1,5 +1,6 @@
 data/
 multirun/
-output/
 __pycache__/
 !src/data
+*.env
+outputs/
