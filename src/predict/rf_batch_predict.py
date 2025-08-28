@@ -7,7 +7,7 @@ import numpy as np
 import rioxarray
 from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score, confusion_matrix
-
+from pathlib import Path
 from src.data.aef_fetch import AEFDataHandler
 
 
@@ -25,7 +25,7 @@ class AEFPredictor:
 
         os.makedirs(self.output_dir, exist_ok=True)
 
-    def _predict_single_polygon(self, polygon, save_results=False, idx=None):
+    def _predict_single_polygon(self, polygon):
         """
         RAM-efficient single polygon prediction.
         """
@@ -48,17 +48,7 @@ class AEFPredictor:
             prediction_layer = roi.preds.rio.write_crs(roi.rio.crs)
             prediction_layer = prediction_layer.clip(min=0, max=1)
 
-            if save_results:
-                filename = os.path.join(
-                    self.output_dir,
-                    f"prediction_{idx}.nc" if idx is not None else "prediction.nc"
-                )
-                prediction_layer.to_netcdf(filename)
-                del prediction_layer
-                gc.collect()
-                return filename
-            else:
-                return prediction_layer
+            return prediction_layer
 
         except Exception as e:
             print(f"Error processing polygon: {e}")
@@ -68,57 +58,36 @@ class AEFPredictor:
     def run_predictions(
         self,
         gdf_inference_path,
-        batch_size=10,
         max_workers=4,
         no_grids=None,
-        save_results=False
     ):
         """
         Run predictions on polygons in batches with multi-threading.
-        Returns either a list of file paths (if save_results=True) or a list of in-memory grids.
         """
         gdf_grids = self.datahandler.read_data(gdf_inference_path)
 
         if no_grids:
             gdf_grids = gdf_grids.iloc[random.sample(range(len(gdf_grids)), no_grids)]
 
-        all_results = []
-        total_batches = (len(gdf_grids) + batch_size - 1) // batch_size
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(self._predict_single_polygon, polygon): idx
+                for idx, polygon in enumerate(gdf_grids.geometry)
+            }
 
-        for batch_idx in range(0, len(gdf_grids), batch_size):
-            batch_end = min(batch_idx + batch_size, len(gdf_grids))
-            batch_tasks = gdf_grids.iloc[batch_idx:batch_end].geometry.tolist()
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Predicting"):
+                try:
+                    result = future.result()
+                    if result is not None:
+                        yield result.transpose('y', 'x')   # stream result immediately
+                except Exception as e:
+                    print(f"Task failed: {e}")
 
-            batch_results = []
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = {
-                    executor.submit(
-                        self._predict_single_polygon,
-                        polygon,
-                        save_results,
-                        batch_idx + i
-                    ): i
-                    for i, polygon in enumerate(batch_tasks)
-                }
-
-                for future in tqdm(as_completed(futures), total=len(futures),
-                                   desc=f"Batch {batch_idx//batch_size + 1}/{total_batches}"):
-                    try:
-                        result = future.result()
-                        if result is not None:
-                            batch_results.append(result)
-                    except Exception as e:
-                        print(f"Task failed: {e}")
-
-            all_results.extend(batch_results)
-
-            # Clean batch
-            del batch_results
-            gc.collect()
-
-        return all_results
-
-    def evaluate_predictions(self, results, datapath):
+    def evaluate_predictions(self,
+                             datapath,
+                             gdf_inference_path,
+                             max_workers=4,
+                             no_grids=None):
         """
         Evaluate predicted grids against reference LULC data.
         If results are file paths, will load them before evaluation.
@@ -130,12 +99,11 @@ class AEFPredictor:
         accuracy_scores = []
         conf_matrices = []
 
-        for grid in tqdm(results, desc="Evaluating predictions"):
-            if isinstance(grid, str):  # file path
-                grid = rioxarray.open_rasterio(grid)
-
-            # Ensure consistent dimensions
-            grid = grid.transpose('y', 'x')
+        for grid in tqdm(self.run_predictions(gdf_inference_path,
+                                              max_workers=max_workers,
+                                              no_grids=no_grids),
+                         total=no_grids if no_grids else None,
+                         desc="Evaluating"):
 
             if grid.rio.crs != gsc_lulc.rio.crs:
                 grid = grid.rio.reproject(gsc_lulc.rio.crs)
@@ -171,3 +139,37 @@ class AEFPredictor:
             "recall": float(np.mean(recall_scores)),
             "accuracy": float(np.mean(accuracy_scores)),
         }
+
+    def save_forest_cover(self,
+                        output_path,
+                        gdf_inference_path,
+                        max_workers=4,
+                        no_grids=None,
+                        chunks={"x": 2048, "y": 2048}):
+        """
+        Save forest cover predictions to raster without blowing up RAM.
+        """
+        # Collect predictions as xarrays (preferably already dask-backed)
+        predictions = list(self.run_predictions(
+            gdf_inference_path,
+            max_workers=max_workers,
+            no_grids=no_grids
+        ))
+
+        # Merge lazily with dask
+        merged = rioxarray.merge.merge_arrays(predictions)
+
+        # Rechunk to control memory footprint during write
+        merged = merged.chunk(chunks)
+
+        # Write out lazily, dask handles chunk-wise writing
+        if output_path:
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            merged.rio.to_raster(output_path, tiled=True, BIGTIFF="IF_SAFER")
+
+        else:
+            merged.rio.to_raster("prediction.tif", tiled=True, BIGTIFF="IF_SAFER")
+
+
+        
+
