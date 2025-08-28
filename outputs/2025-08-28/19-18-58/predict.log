@@ -1,0 +1,2 @@
+[2025-08-28 19:19:03,252][rasterio._env][INFO] - GDAL signalled an error: err_no=1, msg='AUSTRALIA_2020_LULC_GDA_MODIFIED.tif: TIFFFetchDirectory:data/gsc/AUSTRALIA_2020_LULC_GDA_MODIFIED.tif: Can not read TIFF directory count'
+[2025-08-28 19:19:03,253][rasterio._env][INFO] - GDAL signalled an error: err_no=1, msg='AUSTRALIA_2020_LULC_GDA_MODIFIED.tif: TIFFReadDirectory:Failed to read directory at offset 3246577348'

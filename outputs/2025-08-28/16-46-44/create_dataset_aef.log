@@ -1,0 +1,2 @@
+[2025-08-28 16:46:49,197][src.data.aef_fetch][WARNING] - data/aef/2024/embeddings/non_forest_2024.parquet already exists. Overwriting.
+[2025-08-28 16:47:55,199][src.data.aef_fetch][ERROR] - Error fetching polygon: cannot schedule new futures after interpreter shutdown

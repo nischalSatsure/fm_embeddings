@@ -1,0 +1,8 @@
+[2025-08-28 16:46:30,822][src.data.aef_fetch][WARNING] - data/aef/2024/embeddings/forest_2024.parquet already exists. Overwriting.
+[2025-08-28 16:46:33,574][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 9
+[2025-08-28 16:46:33,846][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:46:34,480][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:46:35,215][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:46:35,341][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 9
+[2025-08-28 16:46:36,242][src.data.aef_fetch][ERROR] - Error fetching polygon: cannot schedule new futures after interpreter shutdown
+[2025-08-28 16:46:36,247][src.data.aef_fetch][ERROR] - Error fetching polygon: cannot schedule new futures after interpreter shutdown

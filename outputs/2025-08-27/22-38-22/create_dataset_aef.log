@@ -1,0 +1,3 @@
+[2025-08-27 22:38:25,146][root][WARNING] - data/2024//embeddings/test_2024.parquet already exists. Overwriting.
+[2025-08-27 22:39:02,774][root][INFO] - Dataset saved to data/2024//embeddings/test_2024.parquet
+[2025-08-27 22:39:02,780][root][INFO] - Dataset saved to data/2024//embeddings/test_2024.parquet

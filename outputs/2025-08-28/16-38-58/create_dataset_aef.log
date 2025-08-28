@@ -1,0 +1,14 @@
+[2025-08-28 16:39:05,203][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:39:05,210][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:39:05,235][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:41:16,065][googleapiclient.http][WARNING] - Sleeping 1.52 seconds before retry 1 of 5 for request: POST https://earthengine.googleapis.com/v1/projects/earthengine-legacy/image:computePixels?, after 503
+[2025-08-28 16:42:04,166][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:42:04,269][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:42:15,174][googleapiclient.http][WARNING] - Sleeping 0.55 seconds before retry 1 of 5 for request: POST https://earthengine.googleapis.com/v1/projects/earthengine-legacy/image:computePixels?, after 503
+[2025-08-28 16:43:14,334][googleapiclient.http][WARNING] - Sleeping 0.25 seconds before retry 1 of 5 for request: POST https://earthengine.googleapis.com/v1/projects/earthengine-legacy/image:computePixels?, after 503
+[2025-08-28 16:43:37,657][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:43:38,183][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:43:39,633][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:43:39,648][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:43:41,488][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10
+[2025-08-28 16:43:56,391][urllib3.connectionpool][WARNING] - Connection pool is full, discarding connection: earthengine.googleapis.com. Connection pool size: 10

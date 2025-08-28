@@ -1,0 +1,9 @@
+[2025-08-28 16:41:15,948][googleapiclient.http][WARNING] - Sleeping 0.36 seconds before retry 1 of 5 for request: POST https://earthengine.googleapis.com/v1/projects/earthengine-legacy/image:computePixels?, after 503
+[2025-08-28 16:41:24,357][src.data.aef_fetch][ERROR] - Error fetching polygon: No data found in bounds. Data variable: A00
+[2025-08-28 16:41:26,618][src.data.aef_fetch][ERROR] - Error fetching polygon: No data found in bounds. Data variable: A00
+[2025-08-28 16:41:28,659][src.data.aef_fetch][ERROR] - Error fetching polygon: No data found in bounds. Data variable: A00
+[2025-08-28 16:43:14,657][googleapiclient.http][WARNING] - Sleeping 0.71 seconds before retry 1 of 5 for request: POST https://earthengine.googleapis.com/v1/projects/earthengine-legacy/image:computePixels?, after 503
+[2025-08-28 16:45:03,548][googleapiclient.http][WARNING] - Sleeping 1.84 seconds before retry 1 of 5 for request: POST https://earthengine.googleapis.com/v1/projects/earthengine-legacy/image:computePixels?, after 503
+[2025-08-28 16:46:19,405][src.data.aef_fetch][ERROR] - Error fetching polygon: cannot schedule new futures after interpreter shutdown
+[2025-08-28 16:46:19,450][src.data.aef_fetch][ERROR] - Error fetching polygon: cannot schedule new futures after interpreter shutdown
+[2025-08-28 16:46:19,584][src.data.aef_fetch][ERROR] - Error fetching polygon: cannot schedule new futures after interpreter shutdown

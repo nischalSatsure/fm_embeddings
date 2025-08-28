@@ -1,0 +1,7 @@
+aef:
+  filepath: data/aef/2024/labels/non_forest_2024.geojson
+  year: 2024
+  output_path: data/aef/2024/embeddings/non_forest_2024.parquet
+  clip: true
+  cls: 0
+max_workers: 16

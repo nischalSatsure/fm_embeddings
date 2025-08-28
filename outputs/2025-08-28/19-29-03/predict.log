@@ -1,0 +1,1 @@
+[2025-08-28 19:29:06,815][src.data.aef_fetch][ERROR] - Error fetching polygon: Image.select: Parameter 'input' is required and may not be null.

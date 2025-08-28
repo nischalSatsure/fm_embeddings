@@ -1,0 +1,2 @@
+[2025-08-28 16:38:46,802][src.data.aef_fetch][ERROR] - Error fetching polygon: cannot schedule new futures after interpreter shutdown
+[2025-08-28 16:38:46,842][src.data.aef_fetch][ERROR] - Error fetching polygon: cannot schedule new futures after interpreter shutdown

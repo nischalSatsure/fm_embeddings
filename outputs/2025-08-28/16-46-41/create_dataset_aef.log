@@ -1,0 +1,1 @@
+[2025-08-28 16:53:59,174][googleapiclient.http][WARNING] - Sleeping 1.18 seconds before retry 1 of 5 for request: POST https://earthengine.googleapis.com/v1/projects/earthengine-legacy/image:computePixels?, after ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))

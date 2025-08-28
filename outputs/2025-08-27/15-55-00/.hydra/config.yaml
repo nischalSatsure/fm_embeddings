@@ -1,0 +1,4 @@
+default:
+- model: predict/kmeans
+- __self__
+YEAR: 2023

@@ -1,0 +1,14 @@
+experiments:
+  data:
+    forest: data/aef/2024/embeddings/forest_2024.parquet
+    non_forest: data/aef/2024/embeddings/non_forest_2024.parquet
+  split:
+    shuffle: true
+    random_state: 42
+    test_size: 0.3
+  report_path: experiments/rf_aef_v1/rf_aef_v1_report.txt
+  model_save_path: experiments/rf_aef_v1/rf_aef_v1_model.pkl
+data: null
+split: null
+report_path: null
+model_save_path: null

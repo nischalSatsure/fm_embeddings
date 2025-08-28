@@ -1,0 +1,6 @@
+filepath: drive/2024/labels/forest.geojson
+year: 2024
+output_path: drive/2024/embeddings/aef_forest_2024.parquet
+clip: true
+cls: 1
+max_workers: 4

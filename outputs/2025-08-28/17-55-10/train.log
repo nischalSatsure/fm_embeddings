@@ -1,0 +1,5 @@
+[2025-08-28 17:55:10,339][__main__][INFO] - Initializing RF_ModelHandler with config.
+[2025-08-28 17:55:10,339][__main__][INFO] - Reading data.
+[2025-08-28 17:55:10,684][__main__][INFO] - Preprocessing data.
+[2025-08-28 17:55:11,961][__main__][INFO] - Splitting data.
+[2025-08-28 17:55:12,297][__main__][INFO] - Training model.

@@ -1,0 +1,7 @@
+gdf_inference_path: data/gsc/area_1_grids_aus.geojson
+model_path: experiments/rf_aef_v1/rf_aef_v1.pkl
+batch_size: 10
+max_workers: 4
+no_grids: 2
+year: 2020
+datapath: data/gsc/AUSTRALIA_2020_LULC_GDA_MODIFIED.tif
