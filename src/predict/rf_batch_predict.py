@@ -9,7 +9,9 @@ from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score, confusion_matrix
 from pathlib import Path
 from src.data.aef_fetch import AEFDataHandler
+import logging
 
+logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
 
 class AEFPredictor:
     """
@@ -46,7 +48,7 @@ class AEFPredictor:
             gc.collect()
 
             prediction_layer = roi.preds.rio.write_crs(roi.rio.crs)
-            prediction_layer = prediction_layer.clip(min=0, max=1)
+            prediction_layer = prediction_layer.clip(min=0, max=1).astype(np.uint8)
 
             return prediction_layer
 

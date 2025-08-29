@@ -1,0 +1,1 @@
+Evaluation Results: {'precision': 0.4900887725581547, 'recall': 0.5128478504125257, 'accuracy': 0.9106615055302062}
