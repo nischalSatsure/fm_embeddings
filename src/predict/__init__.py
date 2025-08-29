@@ -1,0 +1,1 @@
+from rf_batch_predict import AEFPredictor

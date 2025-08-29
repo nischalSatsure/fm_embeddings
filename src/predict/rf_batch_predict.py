@@ -9,6 +9,7 @@ from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score, confusion_matrix
 from pathlib import Path
 from src.data.aef_fetch import AEFDataHandler
+from shapely.geometry import Polygon
 import logging
 
 logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
@@ -50,7 +51,41 @@ class AEFPredictor:
             prediction_layer = roi.preds.rio.write_crs(roi.rio.crs)
             prediction_layer = prediction_layer.clip(min=0, max=1).astype(np.uint8)
 
-            return prediction_layer
+            return prediction_layer.transpose('y', 'x')
+
+        except Exception as e:
+            print(f"Error processing polygon: {e}")
+            gc.collect()
+            return None
+        
+    def _predict_single_latlon(self, 
+                                lat: float, 
+                                lon: float, 
+                                radius: float
+                                ):
+        """
+        RAM-efficient single polygon prediction.
+        """
+        try:
+            roi = self.datahandler.fetch_latlon_extent(lat, lon, radius, self.year)
+            df_test = self.datahandler.get_dataframe(roi)
+
+            preds = self.model.predict(df_test)
+
+            # Clear df_test
+            del df_test
+            gc.collect()
+
+            # Add predictions as new variable
+            roi["preds"] = (("x", "y"), preds.reshape(roi.x.size, roi.y.size))
+
+            del preds
+            gc.collect()
+
+            prediction_layer = roi.preds.rio.write_crs(roi.rio.crs)
+            prediction_layer = prediction_layer.clip(min=0, max=1).astype(np.uint8)
+
+            return prediction_layer.transpose('y', 'x')
 
         except Exception as e:
             print(f"Error processing polygon: {e}")
@@ -81,7 +116,7 @@ class AEFPredictor:
                 try:
                     result = future.result()
                     if result is not None:
-                        yield result.transpose('y', 'x')   # stream result immediately
+                        yield result   # stream result immediately
                 except Exception as e:
                     print(f"Task failed: {e}")
 
@@ -172,6 +207,27 @@ class AEFPredictor:
         else:
             merged.rio.to_raster("prediction.tif", tiled=True, BIGTIFF="IF_SAFER")
 
+    def visualize_latlon(self, lat: float, lon: float, radius: float, save_tiff=False):
 
-        
+        roi = self.datahandler.fetch_latlon_extent(lat, lon, radius, self.year)
+        prediction_layer = roi.rio.reproject(3857)
 
+        # clipping values which reprojecting introduces
+        prediction_layer = prediction_layer.clip(min=0)
+
+        # Create the image plot
+        prediction_plot = prediction_layer.hvplot.image(
+            cmap='viridis',  # Choose a colormap for predictions
+            alpha=0.6,
+            width=700,
+            height=600,
+            title='Forest Cover Prediction',
+            tiles='EsriImagery',
+            project=True,
+            clim=(prediction_layer.min().item(), prediction_layer.max().item()),
+        )
+
+        if save_tiff:
+            prediction_layer.rio.to_raster('prediction.tif')
+
+        return prediction_plot

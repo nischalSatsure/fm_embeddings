@@ -39,6 +39,17 @@ class AEFDataHandler:
         except Exception as e:
             logger.error(f"Error fetching polygon: {e}")
             return None
+    
+    def fetch_latlon_extent(self, lat:float, lon:float, radius:float, YEAR: int) -> xr.Dataset:
+        try:
+            polygon_embd = self.miner.fetch(
+                lat=lat, lon=lon, radius=radius,
+                daterange=f"{YEAR}-01-01/{YEAR+1}-08-19"
+            )
+            return polygon_embd.rename({'X': 'x', 'Y': 'y'} )
+        except Exception as e:
+            logger.error(f"Error fetching polygon: {e}")
+            return None
 
     def clip_to_geometry(self, polygon_embd: xr.Dataset, geometry: Polygon) -> xr.Dataset:
         project = pyproj.Transformer.from_crs("EPSG:4326", polygon_embd.rio.crs, always_xy=True).transform
