@@ -1,1 +1,1 @@
-from src import AEFPredictor
+from .src import AEFPredictor

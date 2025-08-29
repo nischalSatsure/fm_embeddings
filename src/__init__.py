@@ -1,1 +1,1 @@
-from predict import AEFPredictor
+from .predict import AEFPredictor
