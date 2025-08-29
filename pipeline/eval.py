@@ -18,6 +18,7 @@ def evaluate_forest_cover(cfg: DictConfig):
 
     predictor = AEFPredictor(model, cfg.year)
     results = predictor.evaluate_predictions(
+        datapath=cfg.datapath,
         gdf_inference_path=cfg.gdf_inference_path,
         max_workers=cfg.max_workers,
         no_grids=cfg.no_grids
@@ -28,4 +29,3 @@ def evaluate_forest_cover(cfg: DictConfig):
 
 if __name__ == "__main__":
     evaluate_forest_cover()
-    # create_forest_cover()

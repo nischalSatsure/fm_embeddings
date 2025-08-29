@@ -8,7 +8,7 @@ import rioxarray
 from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score, confusion_matrix
 from pathlib import Path
-from src.data.aef_fetch import AEFDataHandler
+from ..data.aef_fetch import AEFDataHandler
 from shapely.geometry import Polygon
 import logging
 
