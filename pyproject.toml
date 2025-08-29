@@ -8,3 +8,6 @@ dependencies = [
     "omegaconf>=2.3.0",
     "scikit-learn>=1.7.1",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
