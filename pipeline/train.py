@@ -32,7 +32,6 @@ def train_model(cfg: DictConfig) -> None:
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="train")
 def exp_train_model(cfg: DictConfig) -> None:
-
     logger.info("Initializing RF_ModelHandler with config.")
     model_handler = RF_Trainer(cfg)
 
