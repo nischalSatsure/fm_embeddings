@@ -16,8 +16,12 @@ def evaluate_forest_cover(cfg: DictConfig):
         eval_raster=cfg.eval_raster,
         inference_region=cfg.inference_region,
         max_workers=cfg.max_workers,
+        grid_size=cfg.grid_size,
+        grid_overlap=cfg.grid_overlap,
+        min_area=cfg.min_area,
         no_grids=cfg.no_grids
     )
+
     logging.info(f"Evaluation Results: {results}")
 
 
