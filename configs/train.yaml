@@ -1,11 +1,15 @@
-defaults:
-  - experiments: rf_aef_v1
-  - _self_
+experiment_name: rf_aef_v1
+save_path: experiments/${experiment_name}
 
-data: null
+paths:
+  report: ${save_path}/${experiment_name}_report.txt
+  model: ${save_path}/${experiment_name}_model.pkl
 
-split: null
+data:
+  forest: data/aef/2024/embeddings/forest_2024.parquet
+  non_forest: data/aef/2024/embeddings/non_forest_2024.parquet
 
-report_path: null
-
-model_save_path: null
+split:
+  shuffle: true
+  random_state: 42
+  test_size: 0.3
