@@ -214,9 +214,9 @@ class AEFPredictor:
         merged = merged.chunk(chunks)
 
         if clip: 
-            boundary = self.datahandler.read_data(inference_region)
-            merged = self.datahandler.clip_to_geometry(merged, boundary.geometry)
-            merged = merged.clip(min=0, max=1) # clipping involved reprojection that sometimes creates null values.
+            boundary = self.datahandler.read_data(inference_region).union_all() # to get the single polygon 
+            merged = self.datahandler.clip_to_geometry(merged, boundary)
+            # merged = merged.clip(min=0, max=1) # clipping involved reprojection that sometimes creates null values.
 
         # Write out lazily, dask handles chunk-wise writing
         if output_path:
@@ -262,4 +262,7 @@ if __name__ == "__main__":
     model = joblib.load(model_path)
     handler = AEFPredictor(model, 2024)
 
-    handler.visualize_latlon(24.06101, 74.60881, 100)   
+    # handler.visualize_latlon(24.06101, 74.60881, 100)   
+
+
+
