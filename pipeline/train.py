@@ -39,7 +39,7 @@ def exp_train_model(cfg: DictConfig) -> None:
     cfg.model_save_path = cfg.experiments.model_save_path
 
     logger.info("Initializing RF_ModelHandler with config.")
-    model_handler = RF_ModelHandler(cfg)
+    model_handler = RF_Trainer(cfg)
 
     logger.info("Reading data.")
     model_handler.read_data()

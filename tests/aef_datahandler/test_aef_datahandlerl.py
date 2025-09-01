@@ -1,7 +1,7 @@
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from src.dataset.aef import AEFDataHandler
+from ...src.dataset.aef import AEFDataHandler
 import pandas as pd
 import logging
 
