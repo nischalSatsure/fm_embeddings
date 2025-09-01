@@ -10,6 +10,7 @@ from sklearn.metrics import precision_score, recall_score, accuracy_score, confu
 from pathlib import Path
 from ..data.aef_fetch import AEFDataHandler
 from shapely.geometry import Polygon
+import hvplot.xarray
 import logging
 
 logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
@@ -209,7 +210,8 @@ class AEFPredictor:
 
     def visualize_latlon(self, lat: float, lon: float, radius: float, save_tiff=False):
 
-        roi = self.datahandler.fetch_latlon_extent(lat, lon, radius, self.year)
+        roi = self._predict_single_latlon(lat, lon, radius)
+        # print(roi)
         prediction_layer = roi.rio.reproject(3857)
 
         # clipping values which reprojecting introduces
@@ -218,7 +220,7 @@ class AEFPredictor:
         # Create the image plot
         prediction_plot = prediction_layer.hvplot.image(
             cmap='viridis',  # Choose a colormap for predictions
-            alpha=0.6,
+            alpha=0.4,
             width=700,
             height=600,
             title='Forest Cover Prediction',
@@ -231,3 +233,13 @@ class AEFPredictor:
             prediction_layer.rio.to_raster('prediction.tif')
 
         return prediction_plot
+    
+if __name__ == "__main__":
+    import joblib
+    model_path = "experiments/rf_aef_v1/rf_aef_v1_model.pkl"
+    year = 2024
+
+    model = joblib.load(model_path)
+    handler = AEFPredictor(model, 2024)
+
+    handler.visualize_latlon(24.06101, 74.60881, 100)

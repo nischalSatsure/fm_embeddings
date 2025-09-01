@@ -69,9 +69,13 @@ class AEFDataHandler:
         else:
             df = polygon_embd.isel(time=-1).to_dataframe().reset_index()
             
-        columns_to_drop = ['x', 'y', 'spatial_ref']
+        columns_to_drop = ['x', 'y']
         if 'time' in df.columns:
             columns_to_drop.append('time')
+
+        if 'spatial_ref' in df.columns:
+            columns_to_drop.append('spatial_ref')
+            
         df.drop(columns=columns_to_drop, inplace=True)
 
         polygon_embd.close()
