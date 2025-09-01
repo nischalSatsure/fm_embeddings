@@ -1,11 +1,6 @@
 from omegaconf import DictConfig, OmegaConf
 import hydra
-
-import gc
-import numpy as np
-from mapminer import miners
-# from concurrent.futures import ThreadPoolExecutor, as_completed
-from src.predict.rf_batch_predict import AEFPredictor
+from src.inference.rf import AEFPredictor
 import joblib
 import logging
 
@@ -23,7 +18,6 @@ def evaluate_forest_cover(cfg: DictConfig):
         max_workers=cfg.max_workers,
         no_grids=cfg.no_grids
     )
-
     logging.info(f"Evaluation Results: {results}")
 
 

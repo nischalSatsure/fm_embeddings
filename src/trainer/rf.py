@@ -9,7 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class RF_ModelHandler:
+class RF_Trainer:
     def __init__(self, config):
         self.config = config
         self.model = RandomForestClassifier()

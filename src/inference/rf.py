@@ -2,13 +2,13 @@ import os
 import gc
 import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
 import numpy as np
 import rioxarray
 from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score, confusion_matrix
 from pathlib import Path
-from ..data.aef_fetch import AEFDataHandler
+from ..dataset.aef import AEFDataHandler
+from ..utils import create_grid
 import logging
 
 logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
@@ -18,14 +18,15 @@ class AEFPredictor:
     A class to handle polygon-based predictions and evaluation against reference data.
     """
 
-    def __init__(self, model, year, output_dir="predictions", target_lulc_value=8):
+    def __init__(self, model, year, output_dir="predictions"):
         self.model = model
         self.year = year
         self.output_dir = output_dir
         self.datahandler = AEFDataHandler()
-        self.target_lulc_value = target_lulc_value
 
         os.makedirs(self.output_dir, exist_ok=True)
+
+    # def _get_polygon(self, polygon_path):
 
     def _predict_single_polygon(self, polygon):
         """
@@ -91,19 +92,14 @@ class AEFPredictor:
             gc.collect()
             return None
 
-    def run_predictions(
+    def multithreaded_predictions(
         self,
-        gdf_inference_path,
+        gdf_grids,
         max_workers=4,
-        no_grids=None,
     ):
         """
         Run predictions on polygons in batches with multi-threading.
         """
-        gdf_grids = self.datahandler.read_data(gdf_inference_path)
-
-        if no_grids:
-            gdf_grids = gdf_grids.iloc[random.sample(range(len(gdf_grids)), no_grids)]
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
@@ -120,32 +116,37 @@ class AEFPredictor:
                     print(f"Task failed: {e}")
 
     def evaluate_predictions(self,
-                             datapath,
-                             gdf_inference_path,
+                             eval_raster,
+                             inference_region,
                              max_workers=4,
+                             target_lulc_value=8,
+                             grid_size=5000,
+                             grid_overlap=500,
+                             min_area=1e8,
                              no_grids=None):
         """
         Evaluate predicted grids against reference LULC data.
         If results are file paths, will load them before evaluation.
         """
-        gsc_lulc = rioxarray.open_rasterio(datapath)
+        evaluator = rioxarray.open_rasterio(eval_raster)
 
         precision_scores = []
         recall_scores = []
         accuracy_scores = []
         conf_matrices = []
 
-        for grid in tqdm(self.run_predictions(gdf_inference_path,
-                                              max_workers=max_workers,
-                                              no_grids=no_grids),
+        gdf_grids = self.datahandler.read_data_with_grids(inference_region, min_area=min_area, grid_size=grid_size, grid_overlap=grid_overlap)
+
+        for grid in tqdm(self.multithreaded_predictions(gdf_grids,
+                                              max_workers=max_workers),
                          total=no_grids if no_grids else None,
                          desc="Evaluating"):
 
-            if grid.rio.crs != gsc_lulc.rio.crs:
-                grid = grid.rio.reproject(gsc_lulc.rio.crs)
+            if grid.rio.crs != evaluator.rio.crs:
+                grid = grid.rio.reproject(evaluator.rio.crs)
 
             bbox = grid.rio.bounds()
-            big_clip = gsc_lulc.rio.clip_box(*bbox)
+            big_clip = evaluator.rio.clip_box(*bbox)
 
             small_aligned = grid.rio.reproject_match(big_clip)
             # small_aligned = grid.clip(min=0, max=1)
@@ -162,7 +163,7 @@ class AEFPredictor:
             big_flat = big_flat[mask]
             
             # Binarize ground truth
-            big_flat_binary = (big_flat == self.target_lulc_value).astype(int)
+            big_flat_binary = (big_flat == target_lulc_value).astype(int)
 
             # Metrics
             precision_scores.append(precision_score(big_flat_binary, small_flat, zero_division=0))
@@ -177,20 +178,30 @@ class AEFPredictor:
         }
 
     def save_forest_cover(self,
+                        inference_region,
                         output_path,
-                        gdf_inference_path,
                         max_workers=4,
+                        grid_size=5000,
+                        grid_overlap=500,
+                        min_area=1e8,
+                        clip=True,
                         no_grids=None,
-                        clip_path=None,
                         chunks={"x": 2048, "y": 2048}):
         """
         Save forest cover predictions to raster without blowing up RAM.
         """
         # Collect predictions as xarrays (preferably already dask-backed)
-        predictions = list(self.run_predictions(
-            gdf_inference_path,
-            max_workers=max_workers,
-            no_grids=no_grids
+
+        gdf_grids = self.datahandler.read_data_with_grids(inference_region, 
+                                                          min_area=min_area, 
+                                                          grid_size=grid_size, 
+                                                          grid_overlap=grid_overlap)
+        if no_grids:
+            gdf_grids = gdf_grids.iloc[random.sample(range(len(gdf_grids)), no_grids)]
+
+        predictions = list(self.multithreaded_predictions(
+            gdf_grids,
+            max_workers=max_workers
         ))
 
         # Merge lazily with dask
@@ -199,12 +210,10 @@ class AEFPredictor:
         # Rechunk to control memory footprint during write
         merged = merged.chunk(chunks)
 
-        if clip_path: 
-            import geopandas as gpd
-            boundary = gpd.read_file(clip_path)
-            fix_crs = boundary.to_crs(merged.rio.crs)
-            merged = merged.rio.clip(fix_crs.geometry, fix_crs.crs)
-            merged = merged.clip(min=0, max=1)
+        if clip: 
+            boundary = self.datahandler.read_data(inference_region)
+            merged = self.datahandler.clip_to_geometry(merged, boundary.geometry)
+            merged = merged.clip(min=0, max=1) # clipping involved reprojection that sometimes creates null values.
 
         # Write out lazily, dask handles chunk-wise writing
         if output_path:

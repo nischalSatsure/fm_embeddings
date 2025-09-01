@@ -1,1 +1,1 @@
-from .src.predict.rf_batch_predict import AEFPredictor
+from .src.inference.rf import AEFPredictor

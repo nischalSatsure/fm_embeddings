@@ -1,4 +1,4 @@
-from src.model_handler.rf import RF_ModelHandler
+from src.trainer.rf import RF_Trainer
 import hydra
 from omegaconf import DictConfig
 import logging
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 def train_model(cfg: DictConfig) -> None:
 
     logger.info("Initializing RF_ModelHandler with config.")
-    model_handler = RF_ModelHandler(cfg)
+    model_handler = RF_Trainer(cfg)
 
     logger.info("Reading data.")
     model_handler.read_data()

@@ -1,3 +1,4 @@
+experiment_name: rf_aef_v1
 data:
   forest: data/aef/2024/embeddings/forest_2024.parquet
   non_forest: data/aef/2024/embeddings/non_forest_2024.parquet
@@ -7,5 +8,7 @@ split:
   random_state: 42
   test_size: 0.3
 
-report_path: experiments/rf_aef_v1/rf_aef_v1_report.txt
-model_save_path: experiments/rf_aef_v1/rf_aef_v1_model.pkl
+save_path: experiments/
+
+report_path: ${save_path}/${experiment_name}/${experiment_name}_report.txt
+model_save_path: ${save_path}/${experiment_name}/${experiment_name}_model.pkl

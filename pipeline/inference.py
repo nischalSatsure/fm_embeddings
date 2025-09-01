@@ -1,7 +1,7 @@
 
 from omegaconf import DictConfig
 import hydra
-from src.predict.rf_batch_predict import AEFPredictor
+from src.inference.rf import AEFPredictor
 import joblib
 import logging
 

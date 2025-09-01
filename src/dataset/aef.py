@@ -13,6 +13,8 @@ import logging
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from src.utils import create_grid
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +24,67 @@ class AEFDataHandler:
         self.miner = miners.GoogleEmbeddingMiner()
 
     def read_data(self, filepath: str) -> gpd.GeoDataFrame:
-        df_forest = gpd.read_file(filepath)
-        df_forest = df_forest.explode(index_parts=False).reset_index(drop=True)
-        gdf_polygon = df_forest.to_crs(4326)
+        """
+        Read geospatial data from a file and return a GeoDataFrame.
+        """
+        gdf_polygon = gpd.read_file(filepath)
+
+        gdf_polygon = gdf_polygon.explode(index_parts=False).reset_index(drop=True)
+
+        gdf_polygon = gdf_polygon.to_crs(4326)
+
         return gdf_polygon
+
+    def read_data_with_grids(self, 
+                             filepath: str, 
+                             min_area: float, 
+                             grid_size: float, 
+                             grid_overlap: float
+                             ) -> gpd.GeoDataFrame:
+        """
+        Read geospatial data from a file and return a GeoDataFrame.
+        """
+        gdf_polygon = self.read_data(filepath).to_crs(3857)
+
+        gdf_polygon = self._add_grids_if_needed(gdf_polygon, min_area, grid_size, grid_overlap)
+
+        gdf_polygon = gdf_polygon.to_crs(4326)
+
+        return gdf_polygon
+
+    def _add_grids_if_needed(
+        gdf_polygon: gpd.GeoDataFrame,
+        min_area: float = 1e8,
+        grid_size: float = 5000,
+        grid_overlap: float = 500,
+    ) -> gpd.GeoDataFrame:
+        """
+        For each polygon in gdf_polygon:
+        - If polygon area > min_area → replace it with intersecting grid cells.
+        - Otherwise → keep the original polygon.
+        Returns a new GeoDataFrame with all geometries.
+        """
+        results = []
+
+        for geom in gdf_polygon.geometry:
+            if geom.area > min_area:
+                grids = create_grid(geom, grid_size=grid_size, overlap=grid_overlap)
+                results.append(grids)  # GeoDataFrame
+            else:
+                results.append(gpd.GeoDataFrame(geometry=[geom], crs=gdf_polygon.crs))
+
+        return gpd.GeoDataFrame(
+            pd.concat(results, ignore_index=True), crs=gdf_polygon.crs
+        )
+
+
+    def _check_grids_if_needed(self, gdf: gpd.GeoDataFrame, min_area: float, grid_size: float, grid_overlap: float) -> gpd.GeoDataFrame:
+        """
+        Check if the grid is needed based on the area and create it if necessary.
+        """
+        if gdf.area > min_area:
+            gdf = create_grid(gdf.iloc[0].geometry, grid_size=grid_size, overlap=grid_overlap)
+        return gdf
 
     def fetch_polygon_extent(self, polygon: Polygon, YEAR: int, clip: bool = True) -> xr.Dataset:
         try:
@@ -55,9 +114,15 @@ class AEFDataHandler:
         project = pyproj.Transformer.from_crs("EPSG:4326", polygon_embd.rio.crs, always_xy=True).transform
         geom_projected = transform(project, geometry)
 
-        clipped = polygon_embd.rename({'X': 'x', 'Y': 'y'}).rio.clip(
-            [geom_projected], crs=polygon_embd.rio.crs, drop=True
-        )
+        if 'X' in polygon_embd.dims and 'Y' in polygon_embd.dims:
+            clipped = polygon_embd.rename({'X': 'x', 'Y': 'y'}).rio.clip(
+                [geom_projected], crs=polygon_embd.rio.crs, drop=True
+            )
+        else:
+            clipped = polygon_embd.rio.clip(
+                [geom_projected], crs=polygon_embd.rio.crs, drop=True
+            )
+            
         return clipped
 
     def get_dataframe(self, polygon_embd: xr.Dataset) -> pd.DataFrame:

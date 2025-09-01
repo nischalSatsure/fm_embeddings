@@ -3,8 +3,11 @@ batch_size: 10
 max_workers: 8
 no_grids: 200
 year: 2020
+grid_size: 5000
+grid_overlap: 500
+min_area: 1e8
 gdf_inference_path: data/gsc/area_1_grids_aus.geojson
 model_path: experiments/rf_aef_v1/rf_aef_v1_model.pkl
-datapath: data/gsc/AUSTRALIA_2020_LULC_GDA_MODIFIED.tif
+eval_raster: data/gsc/AUSTRALIA_2020_LULC_GDA_MODIFIED.tif
 
 
