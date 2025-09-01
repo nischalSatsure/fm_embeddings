@@ -19,27 +19,27 @@ def main(cfg: DictConfig):
     clip = cfg.dataset.clip
     cls = cfg.dataset.cls
 
-    # data_handler = AEFDataHandler()
-    # if Path(output_path).suffix == '.parquet':
-    #     data_handler.create_dataset_from_polygons_parquet(
-    #         max_workers=max_workers,
-    #         filepath=filepath,
-    #         year=year,
-    #         output_path=output_path,
-    #         clip=clip,
-    #         cls=cls
-    #     )
-    # else:
-    #     data_handler.create_dataset_from_polygons_csv(
-    #         max_workers=max_workers,
-    #         filepath=filepath,
-    #         year=year,
-    #         output_path=output_path,
-    #         clip=clip,
-    #         cls=cls
-    #     )
+    data_handler = AEFDataHandler()
+    if Path(output_path).suffix == '.parquet':
+        data_handler.create_dataset_from_polygons_parquet(
+            max_workers=max_workers,
+            filepath=filepath,
+            year=year,
+            output_path=output_path,
+            clip=clip,
+            cls=cls
+        )
+    else:
+        data_handler.create_dataset_from_polygons_csv(
+            max_workers=max_workers,
+            filepath=filepath,
+            year=year,
+            output_path=output_path,
+            clip=clip,
+            cls=cls
+        )
 
-    # logging.info(f"Dataset saved to {output_path}")
-    print(cfg)
+    logging.info(f"Dataset saved to {output_path}")
+
 if __name__ == "__main__":
     main()
