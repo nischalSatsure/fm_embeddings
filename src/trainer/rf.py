@@ -69,12 +69,12 @@ class RF_Trainer:
         report = classification_report(y_test, y_pred)
 
         # Save the classification report to a file
-        Path(self.config.report_path).parent.mkdir(parents=True, exist_ok=True)
-        with open(self.config.report_path, "w") as f:
+        Path(self.config.paths.report).parent.mkdir(parents=True, exist_ok=True)
+        with open(self.config.paths.report, "w") as f:
             f.write(report)
 
         return {"accuracy": acc, "classification_report": report}
 
     def save_model(self):
-        Path(self.config.model_save_path).parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump(self.model, self.config.model_save_path)
+        Path(self.config.paths.model).parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(self.model, self.config.paths.model)
