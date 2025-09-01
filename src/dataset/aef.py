@@ -52,7 +52,7 @@ class AEFDataHandler:
 
         return gdf_polygon
 
-    def _add_grids_if_needed(
+    def _add_grids_if_needed(self,
         gdf_polygon: gpd.GeoDataFrame,
         min_area: float = 1e8,
         grid_size: float = 5000,
