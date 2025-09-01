@@ -137,6 +137,9 @@ class AEFPredictor:
 
         gdf_grids = self.datahandler.read_data_with_grids(inference_region, min_area=min_area, grid_size=grid_size, grid_overlap=grid_overlap)
 
+        if no_grids:
+            gdf_grids = gdf_grids.iloc[random.sample(range(len(gdf_grids)), no_grids)]
+
         for grid in tqdm(self.multithreaded_predictions(gdf_grids,
                                               max_workers=max_workers),
                          total=no_grids if no_grids else None,

@@ -16,8 +16,12 @@ def create_forest_cover(cfg: DictConfig):
 
     predictor.save_forest_cover(
         output_path=cfg.output_path,
-        gdf_inference_path=cfg.gdf_inference_path,
+        inference_region=cfg.inference_region,
         max_workers=cfg.max_workers,
+        grid_size=cfg.grid_size,
+        grid_overlap=cfg.grid_overlap,
+        min_area=cfg.min_area,
+        clip=cfg.clip,
         no_grids=cfg.no_grids
     )
 
