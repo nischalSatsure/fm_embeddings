@@ -1,0 +1,5 @@
+defaults:
+  - dataset: non_forest
+  - _self_
+
+max_workers: 8
