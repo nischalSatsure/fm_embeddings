@@ -1,7 +1,7 @@
 gdf_inference_path: data/boundaries/pratapgarh_patch_grids.geojson
-
 model_path: experiments/rf_aef_v1/rf_aef_v1_model.pkl
 output_path: data/aef/2024/predictions/paratapgarh/pratapgarh_aef_rf_v1.tif
 max_workers: 8
+year: 2020  
 no_grids: null
-year: 2020
+clip_path: null

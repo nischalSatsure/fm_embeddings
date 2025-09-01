@@ -9,8 +9,6 @@ from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score, confusion_matrix
 from pathlib import Path
 from ..data.aef_fetch import AEFDataHandler
-from shapely.geometry import Polygon
-import hvplot.xarray
 import logging
 
 logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
@@ -183,6 +181,7 @@ class AEFPredictor:
                         gdf_inference_path,
                         max_workers=4,
                         no_grids=None,
+                        clip_path=None,
                         chunks={"x": 2048, "y": 2048}):
         """
         Save forest cover predictions to raster without blowing up RAM.
@@ -200,15 +199,22 @@ class AEFPredictor:
         # Rechunk to control memory footprint during write
         merged = merged.chunk(chunks)
 
+        if clip_path: 
+            import geopandas as gpd
+            boundary = gpd.read_file(clip_path)
+            fix_crs = boundary.to_crs(merged.rio.crs)
+            merged = merged.rio.clip(fix_crs.geometry, fix_crs.crs)
+            merged = merged.clip(min=0, max=1)
+
         # Write out lazily, dask handles chunk-wise writing
         if output_path:
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
             merged.rio.to_raster(output_path, tiled=True, BIGTIFF="IF_SAFER")
-
         else:
             merged.rio.to_raster("prediction.tif", tiled=True, BIGTIFF="IF_SAFER")
 
     def visualize_latlon(self, lat: float, lon: float, radius: float, save_tiff=False):
+        import hvplot.xarray
 
         roi = self._predict_single_latlon(lat, lon, radius)
         # print(roi)
@@ -236,10 +242,12 @@ class AEFPredictor:
     
 if __name__ == "__main__":
     import joblib
+    import hvplot.xarray
+
     model_path = "experiments/rf_aef_v1/rf_aef_v1_model.pkl"
     year = 2024
 
     model = joblib.load(model_path)
     handler = AEFPredictor(model, 2024)
 
-    handler.visualize_latlon(24.06101, 74.60881, 100)
+    handler.visualize_latlon(24.06101, 74.60881, 100)   
