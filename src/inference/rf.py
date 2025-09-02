@@ -242,7 +242,6 @@ class AEFPredictor:
 
         # Create the image plot
         prediction_plot = prediction_layer.hvplot.image(
-            cmap=list(class_colors.values()),  # Choose a colormap for predictions
             alpha=alpha,
             width=700,
             height=600,
