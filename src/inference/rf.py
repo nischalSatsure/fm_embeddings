@@ -167,7 +167,6 @@ class AEFPredictor:
             
             # Binarize ground truth
             big_flat_binary = (big_flat == target_lulc_value).astype(int)
-            (np.unique(small_flat), np.unique(big_flat_binary))
 
             # Metrics
             precision_scores.append(precision_score(big_flat_binary, small_flat, zero_division=0))
@@ -226,7 +225,7 @@ class AEFPredictor:
         else:
             merged.rio.to_raster("prediction.tif", tiled=True, BIGTIFF="IF_SAFER")
 
-    def visualize_latlon(self, lat: float, lon: float, radius: float, save_tiff=False):
+    def visualize_latlon(self, lat: float, lon: float, radius: float, alpha=0.4, save_tiff=False):
         import hvplot.xarray
 
         roi = self._predict_single_latlon(lat, lon, radius)
@@ -234,18 +233,26 @@ class AEFPredictor:
         prediction_layer = roi.rio.reproject(3857)
 
         # clipping values which reprojecting introduces
-        prediction_layer = prediction_layer.clip(min=0)
+        # prediction_layer = prediction_layer.clip(min=0)
 
+        class_colors = {
+                        0: "saddlebrown",    # background / no data / buildup / agriland
+                        1: "forestgreen",  # forest 
+                    }
+        
+        color_list = [class_colors[i] for i in sorted(class_colors.keys())]
+        
         # Create the image plot
         prediction_plot = prediction_layer.hvplot.image(
-            cmap='viridis',  # Choose a colormap for predictions
-            alpha=0.4,
+            cmap=color_list,  # Choose a colormap for predictions
+            alpha=alpha,
             width=700,
             height=600,
             title='Forest Cover Prediction',
             tiles='EsriImagery',
             project=True,
-            clim=(prediction_layer.min().item(), prediction_layer.max().item()),
+            color_levels=len(color_list),
+            clim=(0,1),
         )
 
         if save_tiff:

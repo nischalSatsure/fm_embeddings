@@ -1,0 +1,2 @@
+Evaluation Results: {'precision': 0.4243210473979511, 'recall': 0.48750131672491964, 'accuracy': 0.9255998054497154}
+Evaluation Results: {'precision': 0.46020301358765253, 'recall': 0.5180756027989183, 'accuracy': 0.9079631806248959}
