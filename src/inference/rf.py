@@ -153,7 +153,7 @@ class AEFPredictor:
 
             small_aligned = grid.rio.reproject_match(big_clip)
             # small_aligned = grid.clip(min=0, max=1)
-            small_aligned = small_aligned.where(small_aligned != -9223372036854775808, np.nan)
+            small_aligned = small_aligned.where((small_aligned != -9223372036854775808) & (small_aligned != 255.), np.nan)
 
 
             # Flatten
