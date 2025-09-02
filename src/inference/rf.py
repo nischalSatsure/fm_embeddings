@@ -249,7 +249,7 @@ class AEFPredictor:
             title='Forest Cover Prediction',
             tiles='EsriImagery',
             project=True,
-            color_keys=class_colors,
+            color_key=class_colors,
             clim=(0,1),
         )
 
