@@ -236,22 +236,20 @@ class AEFPredictor:
         # prediction_layer = prediction_layer.clip(min=0)
 
         class_colors = {
-                        0: "saddlebrown",    # background / no data / buildup / agriland
+                        0: "saddlebrown",  # background / no data / buildup / agriland
                         1: "forestgreen",  # forest 
                     }
-        
-        color_list = [class_colors[i] for i in sorted(class_colors.keys())]
-        
+
         # Create the image plot
         prediction_plot = prediction_layer.hvplot.image(
-            cmap=color_list,  # Choose a colormap for predictions
+            cmap=list(class_colors.values()),  # Choose a colormap for predictions
             alpha=alpha,
             width=700,
             height=600,
             title='Forest Cover Prediction',
             tiles='EsriImagery',
             project=True,
-            color_levels=len(color_list),
+            color_keys=class_colors,
             clim=(0,1),
         )
 
