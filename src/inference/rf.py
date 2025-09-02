@@ -242,13 +242,13 @@ class AEFPredictor:
 
         # Create the image plot
         prediction_plot = prediction_layer.hvplot.image(
+            cmap=list(class_colors.values()),  # Choose a colormap for predictions
             alpha=alpha,
             width=700,
             height=600,
             title='Forest Cover Prediction',
             tiles='EsriImagery',
             project=True,
-            color_key=class_colors,
             clim=(0,1),
         )
 
