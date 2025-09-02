@@ -8,7 +8,7 @@ from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score, confusion_matrix
 from pathlib import Path
 from ..dataset.aef import AEFDataHandler
-from ..utils import create_grid
+import dask.array as da
 import logging
 
 logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
@@ -42,8 +42,15 @@ class AEFPredictor:
             del df_test
             gc.collect()
 
+
+            # Wrap predictions in Dask (lazy)
+            preds_dask = da.from_array(
+                preds.reshape(roi.x.size, roi.y.size),
+                chunks=("auto", "auto")  # let Dask decide
+            )
+
             # Add predictions as new variable
-            roi["preds"] = (("x", "y"), preds.reshape(roi.x.size, roi.y.size))
+            roi["preds"] = (("x", "y"), preds_dask)
 
             del preds
             gc.collect()
@@ -202,10 +209,12 @@ class AEFPredictor:
         if no_grids:
             gdf_grids = gdf_grids.iloc[random.sample(range(len(gdf_grids)), no_grids)]
 
-        predictions = list(self.multithreaded_predictions(
-            gdf_grids,
-            max_workers=max_workers
-        ))
+        predictions = []
+        for pred in self.multithreaded_predictions(gdf_grids, max_workers=max_workers):
+            if pred is not None:
+                # Ensure dask-backed and rechunk
+                arr = pred.chunk(chunks)
+                predictions.append(arr)
 
         # Merge lazily with dask
         merged = rioxarray.merge.merge_arrays(predictions)
@@ -223,7 +232,7 @@ class AEFPredictor:
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
             merged.rio.to_raster(output_path, tiled=True, BIGTIFF="IF_SAFER")
         else:
-            merged.rio.to_raster("prediction.tif", tiled=True, BIGTIFF="IF_SAFER")
+            merged.rio.to_raster("prediction.tif", windowed=True, tiled=True, BIGTIFF="IF_SAFER")
 
     def visualize_latlon(self, lat: float, lon: float, radius: float, alpha=0.4, save_tiff=False):
         import hvplot.xarray
