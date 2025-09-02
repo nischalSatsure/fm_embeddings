@@ -160,7 +160,6 @@ class AEFPredictor:
             small_flat = small_aligned.values.flatten()
             big_flat = big_clip.values.flatten()
 
-            print(np.unique(small_flat, return_counts=True), np.unique(big_flat, return_counts=True))
         
             mask = ~np.isnan(small_flat) & ~np.isnan(big_flat)
             small_flat = small_flat[mask]
@@ -168,6 +167,7 @@ class AEFPredictor:
             
             # Binarize ground truth
             big_flat_binary = (big_flat == target_lulc_value).astype(int)
+            (np.unique(small_flat), np.unique(big_flat_binary))
 
             # Metrics
             precision_scores.append(precision_score(big_flat_binary, small_flat, zero_division=0))
