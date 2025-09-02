@@ -160,6 +160,7 @@ class AEFPredictor:
             small_flat = small_aligned.values.flatten()
             big_flat = big_clip.values.flatten()
 
+            print(np.unique(small_flat, return_counts=True), np.unique(big_flat, return_counts=True))
         
             mask = ~np.isnan(small_flat) & ~np.isnan(big_flat)
             small_flat = small_flat[mask]
