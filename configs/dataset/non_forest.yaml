@@ -3,4 +3,3 @@ year: 2024
 output_path: ???
 clip: True
 cls: 0
-max_workers: 8
