@@ -28,6 +28,7 @@ class RF_Trainer:
             n_estimators=config.model["n_estimators"],
             n_jobs=config.model["n_jobs"],
         )
+        self.background = self.config['background_class']
 
     def read_data(self):
         """Read all parquet files for each category and assign class labels."""
@@ -43,14 +44,14 @@ class RF_Trainer:
         self.data = dd.concat(dfs)
         logger.info(f"Loaded data for classes: {class_map}")
 
-    def preprocess(self, background=0):
+    def preprocess(self, background=5):
         """Drop rows with NaNs, add 50 zero rows with class_=background, fill remaining NaNs with 0."""
         feature_cols = [c for c in self.data.columns if c != "class_"]
 
         # Drop rows with any NaNs in features
         self.data = self.data.dropna()
 
-        # Add 50 zero rows with class 6
+        # Add 50 zero rows with class 5
         zero_rows = pd.DataFrame(
             0, index=range(50), columns=feature_cols
         )

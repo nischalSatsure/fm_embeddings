@@ -8,6 +8,8 @@ paths:
 
 data: {}
 
+background_class: 5
+
 split:
   shuffle: true
   random_state: 42
