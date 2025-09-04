@@ -163,7 +163,9 @@ class AEFDataHandler:
         tasks = [(gdf_polygon.iloc[i].geometry, year, clip) for i in range(len(gdf_polygon))]
 
         output_file = Path(output_path)
+        output_file.parent.mkdir(parents=True, exist_ok=True)
         if output_file.exists():
+
             logger.warning(f"{output_path} already exists. Overwriting.")
             output_file.unlink()
 
