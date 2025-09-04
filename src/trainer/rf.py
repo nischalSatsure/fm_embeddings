@@ -1,7 +1,7 @@
 import dask.dataframe as dd
 import pandas as pd
 from dask_ml.model_selection import train_test_split
-from dask_ml.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from pathlib import Path
 import joblib
@@ -96,9 +96,8 @@ class RF_Trainer:
         logger.info(f"{len(self.train_data[0])} rows sent for training.")
 
     def train(self):
-        """Train the RF model (distributed)."""
-        self.model.fit(*self.train_data)
-        logger.info("Model training complete.")
+        X_train, y_train = self.train_data
+        self.model.fit(X_train.compute(), y_train.compute())
 
     def metrics(self):
         """Compute accuracy and classification report."""
