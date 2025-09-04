@@ -106,7 +106,7 @@ class RF_Trainer:
 
         # Bring metrics into memory
         y_test_np = y_test.compute()
-        y_pred_np = y_pred.compute()
+        y_pred_np = y_pred
 
         acc = accuracy_score(y_test_np, y_pred_np)
         report = classification_report(y_test_np, y_pred_np)

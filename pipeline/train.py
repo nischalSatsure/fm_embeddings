@@ -50,12 +50,13 @@ def exp_train_model(cfg: DictConfig) -> None:
     logger.info("Training model.")
     model_handler.train()
 
+    logger.info("Saving model.")
+    model_handler.save_model()
+    
     logger.info("Calculating metrics.")
     metrics = model_handler.metrics()
     logger.info(f"Model metrics: {metrics}")
 
-    logger.info("Saving model.")
-    model_handler.save_model()
 
     logger.info("Training pipeline completed successfully.")
 
