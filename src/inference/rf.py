@@ -230,7 +230,7 @@ class AEFPredictor:
         # Write out lazily, dask handles chunk-wise writing
         if output_path:
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-            merged.rio.to_raster(output_path, tiled=True, BIGTIFF="IF_SAFER")
+            merged.rio.to_raster(output_path,  windowed=True, tiled=True, BIGTIFF="IF_SAFER")
         else:
             merged.rio.to_raster("prediction.tif", windowed=True, tiled=True, BIGTIFF="IF_SAFER")
 

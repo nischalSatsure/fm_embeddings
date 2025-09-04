@@ -1,80 +1,126 @@
-from sklearn.metrics import accuracy_score, classification_report
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from pathlib import Path
+import dask.dataframe as dd
 import pandas as pd
+from dask_ml.model_selection import train_test_split
+from dask_ml.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from pathlib import Path
 import joblib
 import logging
-
 
 logger = logging.getLogger(__name__)
 
 class RF_Trainer:
     def __init__(self, config):
+        """
+        config.data should be a dict of category_name -> list of parquet paths
+        e.g.
+        data:
+          woodland: [woodland_1.parquet, woodland_2.parquet]
+          open_forest: [open_forest_1.parquet]
+          closed_forest: [closed_forest_1.parquet, closed_forest_2.parquet]
+
+        config.split is a dict with keys like test_size, random_state
+        config.model is optional dict with n_estimators, n_jobs
+        config.paths.report & config.paths.model are output file paths
+        """
         self.config = config
-        self.model = RandomForestClassifier()
+        self.model = RandomForestClassifier(
+            n_estimators=config.model["n_estimators"],
+            n_jobs=config.model["n_jobs"],
+        )
 
     def read_data(self):
-        self.forest = pd.read_parquet(self.config.data.forest)
-        self.forest["class"] = 1 
+        """Read all parquet files for each category and assign class labels."""
+        dfs = []
+        # Assign numeric labels automatically
+        class_map = {}
 
-        self.non_forest = pd.read_parquet(self.config.data.non_forest)
-        self.non_forest["class"] = 0
+        for label, (class_name, paths) in enumerate(self.config.data.items()):
+            df = dd.read_parquet(paths).assign(class_=label)
+            class_map[class_name] = label
+            dfs.append(df)
 
-        self.data = pd.concat([self.forest, self.non_forest])
-        del self.forest, self.non_forest
+        self.data = dd.concat(dfs)
+        logger.info(f"Loaded data for classes: {class_map}")
 
-    def preprocess(self):
-        nan_rows = self.data[self.data.isna().all(axis=1)]
-        limited_nan_rows = nan_rows.head(200).fillna(0)
+    def preprocess(self, background=0):
+        """Drop rows with NaNs, add 50 zero rows with class_=background, fill remaining NaNs with 0."""
+        feature_cols = [c for c in self.data.columns if c != "class_"]
 
-        self.data = pd.concat([
-            self.data[~self.data.isna().all(axis=1)],
-            limited_nan_rows], ignore_index=True)
+        # Drop rows with any NaNs in features
+        self.data = self.data.dropna()
 
-        # Fill any other NaNs left in features
-        self.data = self.data.fillna(0)
-        del limited_nan_rows, nan_rows
+        # Add 50 zero rows with class 6
+        zero_rows = pd.DataFrame(
+            0, index=range(50), columns=feature_cols
+        )
+        zero_rows["class_"] = background
+        zero_rows_dd = dd.from_pandas(zero_rows, npartitions=1)
+
+        # Combine
+        self.data = dd.concat([self.data, zero_rows_dd])
 
     def split_data(self):
-        X = self.data.drop(columns=['class'], axis=1)
-        y = self.data['class']
+        """Split into train/test using dask-ml."""
+        X = self.data.drop(columns=["class_"])
+        y = self.data["class_"]
 
-        del self.data
-
-        X_train, X_test, y_train, y_test = train_test_split(X, y, **self.config.split)
-        
-        del X, y
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=self.config.split["test_size"],
+            shuffle=self.config.split["shuffle"],
+            random_state=self.config.split["random_state"],
+        )
 
         self.train_data = (X_train, y_train)
         self.test_data = (X_test, y_test)
-    
+        logger.info("Data split into train and test sets.")
+
     def validate_data(self):
-        assert self.train_data[0].isna().sum().sum() == 0, "Training features contain NaN values"
-        assert self.train_data[1].isna().sum().sum() == 0, "Training labels contain NaN values"
-        assert self.test_data[0].isna().sum().sum() == 0, "Testing features contain NaN values"
-        assert self.test_data[1].isna().sum().sum() == 0, "Testing labels contain NaN values"
+        """Check for NaNs (computes small counts)."""
+        sample = self.test_data[0].sample(frac=0.001).compute()
+        assert sample.isna().sum().sum() == 0, "Testing features contain NaN values"
+
+        sample = self.test_data[1].sample(frac=0.001).compute()
+        assert sample.isna().sum().sum() == 0, "Testing labels contain NaN values"
+
+        sample = self.train_data[0].sample(frac=0.001).compute()
+        assert sample.isna().sum().sum() == 0, "Training features contain NaN values"
+
+        sample = self.train_data[1].sample(frac=0.001).compute()
+        assert sample.isna().sum().sum() == 0, "Training labels contain NaN values"
 
         logger.info("Data validation passed: No NaN values found in training and testing datasets.")
         logger.info(f"{len(self.train_data[0])} rows sent for training.")
 
     def train(self):
+        """Train the RF model (distributed)."""
         self.model.fit(*self.train_data)
+        logger.info("Model training complete.")
 
     def metrics(self):
+        """Compute accuracy and classification report."""
         X_test, y_test = self.test_data
         y_pred = self.model.predict(X_test)
 
-        acc = accuracy_score(y_test, y_pred)
-        report = classification_report(y_test, y_pred)
+        # Bring metrics into memory
+        y_test_np = y_test.compute()
+        y_pred_np = y_pred.compute()
+
+        acc = accuracy_score(y_test_np, y_pred_np)
+        report = classification_report(y_test_np, y_pred_np)
 
         # Save the classification report to a file
         Path(self.config.paths.report).parent.mkdir(parents=True, exist_ok=True)
         with open(self.config.paths.report, "w") as f:
             f.write(report)
 
+        logger.info(f"Model accuracy: {acc:.4f}")
         return {"accuracy": acc, "classification_report": report}
 
     def save_model(self):
+        """Save the trained model."""
         Path(self.config.paths.model).parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(self.model, self.config.paths.model)
+        logger.info(f"Model saved to {self.config.paths.model}")
