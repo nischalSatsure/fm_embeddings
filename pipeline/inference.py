@@ -1,7 +1,7 @@
 
 from omegaconf import DictConfig
 import hydra
-from src.inference.rf import AEFPredictor
+from src.inference.aef import AEFPredictor
 import joblib
 import logging
 
@@ -14,7 +14,7 @@ def create_forest_cover(cfg: DictConfig):
 
     predictor = AEFPredictor(model, cfg.year)
 
-    predictor.save_forest_cover(
+    predictor.save_predictions(
         output_path=cfg.output_path,
         inference_region=cfg.inference_region,
         max_workers=cfg.max_workers,

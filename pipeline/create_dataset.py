@@ -3,6 +3,7 @@ from anyio import Path
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from src.dataset.aef import AEFDataHandler
+from src.dataset.tes import TESDataHandler
 import pandas as pd
 import logging
 
@@ -18,8 +19,14 @@ def main(cfg: DictConfig):
     output_path = cfg.dataset.output_path
     clip = cfg.dataset.clip
     cls = cfg.dataset.cls
+    name = cfg.dataset.name
 
-    data_handler = AEFDataHandler()
+    if name == "aef":
+        data_handler = AEFDataHandler()
+
+    elif name == "tes":
+        data_handler = TESDataHandler()
+
     if Path(output_path).suffix == '.parquet':
         data_handler.create_dataset_from_polygons_parquet(
             max_workers=max_workers,

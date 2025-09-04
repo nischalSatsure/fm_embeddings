@@ -1,7 +1,9 @@
+from operator import gt
 import pandas as pd
 import geopandas as gpd
 from mapminer import miners
 import pyproj
+from sklearn.base import defaultdict
 import xarray as xr
 from shapely.ops import transform
 from shapely.geometry import Polygon
@@ -12,6 +14,7 @@ from tqdm import tqdm
 import logging
 import pyarrow as pa
 import pyarrow.parquet as pq
+from geotessera import GeoTessera
 
 from src.utils import create_grid
 
@@ -21,7 +24,9 @@ logger = logging.getLogger(__name__)
 
 class TESDataHandler:
     def __init__(self):
-        self.miner = miners.GoogleEmbeddingMiner()
+        
+        # Initialize the client
+        self.gt = GeoTessera()
 
     def read_data(self, filepath: str) -> gpd.GeoDataFrame:
         """
@@ -34,133 +39,93 @@ class TESDataHandler:
         gdf_polygon = gdf_polygon.to_crs(4326)
 
         return gdf_polygon
-
-    def read_data_with_grids(self, 
-                             filepath: str, 
-                             min_area: float, 
-                             grid_size: float, 
-                             grid_overlap: float
-                             ) -> gpd.GeoDataFrame:
-        """
-        Read geospatial data from a file and return a GeoDataFrame.
-        """
-        gdf_polygon = self.read_data(filepath).to_crs(3857)
-
-        gdf_polygon = self._add_grids_if_needed(gdf_polygon, min_area, grid_size, grid_overlap)
-
-        gdf_polygon = gdf_polygon.to_crs(4326)
-
-        return gdf_polygon
-
-    def _add_grids_if_needed(self,
-        gdf_polygon: gpd.GeoDataFrame,
-        min_area: float = 1e8,
-        grid_size: float = 5000,
-        grid_overlap: float = 500,
-    ) -> gpd.GeoDataFrame:
-        """
-        For each polygon in gdf_polygon:
-        - If polygon area > min_area → replace it with intersecting grid cells.
-        - Otherwise → keep the original polygon.
-        Returns a new GeoDataFrame with all geometries.
-        """
-        results = []
-
-        for geom in gdf_polygon.geometry:
-            if geom.area > min_area:
-                grids = create_grid(geom, grid_size=grid_size, overlap=grid_overlap)
-                results.append(grids)  # GeoDataFrame
-            else:
-                results.append(gpd.GeoDataFrame(geometry=[geom], crs=gdf_polygon.crs))
-
-        return gpd.GeoDataFrame(
-            pd.concat(results, ignore_index=True), crs=gdf_polygon.crs
-        )
-
-
-    def _check_grids_if_needed(self, gdf: gpd.GeoDataFrame, min_area: float, grid_size: float, grid_overlap: float) -> gpd.GeoDataFrame:
-        """
-        Check if the grid is needed based on the area and create it if necessary.
-        """
-        if gdf.area > min_area:
-            gdf = create_grid(gdf.iloc[0].geometry, grid_size=grid_size, overlap=grid_overlap)
-        return gdf
-
-    def fetch_polygon_extent(self, polygon: Polygon, YEAR: int, clip: bool = True) -> xr.Dataset:
-        try:
-            polygon_embd = self.miner.fetch(
-                polygon=polygon,
-                daterange=f"{YEAR}-01-01/{YEAR+1}-08-19"
-            )
-            if clip:
-                polygon_embd = self.clip_to_geometry(polygon_embd, polygon)
-            return polygon_embd
-        except Exception as e:
-            logger.error(f"Error fetching polygon: {e}")
-            return None
     
-    def fetch_latlon_extent(self, lat:float, lon:float, radius:float, YEAR: int) -> xr.Dataset:
-        try:
-            polygon_embd = self.miner.fetch(
-                lat=lat, lon=lon, radius=radius,
-                daterange=f"{YEAR}-01-01/{YEAR+1}-08-19"
+
+    def get_tile(self, tile_lat, tile_lon, year=2024):
+        embedding, crs, transform = self.gt.fetch_embedding(tile_lat, tile_lon, year=year)
+
+        da = xr.DataArray(
+                embedding,
+                dims=("y", "x", 'band'),   # (C, H, W)
+                coords={
+                    "band": list(range(128)),
+                },
+                name=f"tile_{tile_lat}_{tile_lon}"
             )
-            return polygon_embd.rename({'X': 'x', 'Y': 'y'} )
-        except Exception as e:
-            logger.error(f"Error fetching polygon: {e}")
-            return None
+        del embedding
+        
+        # Add CRS + transform
+        da = da.rio.write_crs(crs)
+        da = da.rio.write_transform(transform)
+
+        del crs, transform
+        da = da.transpose('band','y', 'x')
+
+        return da
+
+    def tiles_to_download(self, polygon):
+        tiles = self.gt.registry.load_blocks_for_region(polygon.bounds, year=2024)
+        return tiles
+
+    def tile_to_polygons(self, gdf_polygon: gpd.GeoDataFrame):
+        _tile_to_polygons = defaultdict(list)
+        for idx, polygon in enumerate(gdf_polygon.geometry):
+            tiles = self.tiles_to_download(polygon)
+            for lat, lon in tiles:
+                _tile_to_polygons[(lat, lon)].append(polygon)
+        return _tile_to_polygons
+    
 
     def clip_to_geometry(self, polygon_embd: xr.Dataset, geometry: Polygon) -> xr.Dataset:
         project = pyproj.Transformer.from_crs("EPSG:4326", polygon_embd.rio.crs, always_xy=True).transform
         geom_projected = transform(project, geometry)
 
-        if 'X' in polygon_embd.dims and 'Y' in polygon_embd.dims:
-            clipped = polygon_embd.rename({'X': 'x', 'Y': 'y'}).rio.clip(
-                [geom_projected], crs=polygon_embd.rio.crs, drop=True
-            )
-        else:
-            clipped = polygon_embd.rio.clip(
-                [geom_projected], crs=polygon_embd.rio.crs, drop=True
-            )
+        clipped = polygon_embd.rio.clip(
+            [geom_projected], crs=polygon_embd.rio.crs, drop=True
+        )
             
         return clipped
 
-    def get_dataframe(self, polygon_embd: xr.Dataset) -> pd.DataFrame:
+    def get_dataframe(self, polygon_embd: xr.DataArray) -> pd.DataFrame:
         if polygon_embd is None:
             return pd.DataFrame()
+        
+        da = polygon_embd.stack(pixel=("y", "x"))
+        da = da.transpose("pixel", "band")
+        df = da.to_pandas() 
+        df = df.reset_index(drop=True).dropna()
+        del da
+        return df
+    
+    def get_polygon_embd_from_tile(self, tile_lat, tile_lon, polygon_list, year):
+        df = None
+        da = self.get_tile(tile_lat, tile_lon, year)
+        for polygon in polygon_list:
 
-        if polygon_embd.time.shape[0] > 1:
-            df = polygon_embd.max(dim='time').to_dataframe().reset_index()
-        else:
-            df = polygon_embd.isel(time=-1).to_dataframe().reset_index()
-            
-        columns_to_drop = ['x', 'y']
-        if 'time' in df.columns:
-            columns_to_drop.append('time')
+            da_clipped = self.clip_to_geometry(da, polygon)
+            _df = self.get_dataframe(da_clipped)
 
-        if 'spatial_ref' in df.columns:
-            columns_to_drop.append('spatial_ref')
-            
-        df.drop(columns=columns_to_drop, inplace=True)
-
-        polygon_embd.close()
-        gc.collect()
+            if df is None:
+                df = _df
+            else:
+                df = pd.concat([df, _df], ignore_index=True)
         return df
 
     def create_dataset_from_polygons_parquet(self,
-                                    filepath: str,
-                                    year: int,
-                                    output_path: str,
-                                    clip: bool,
-                                    max_workers: int,
-                                    cls: int = None,
-                                    ) -> pd.DataFrame:
-        """
-        Process polygons and save results to a Parquet file incrementally.
-        """
-        gdf_polygon = self.read_data(filepath)
+                                             filepath: str,
+                                             year: int,
+                                             output_path: str,
+                                             clip: bool,
+                                             max_workers: int,
+                                             output_file: Path,
+                                             cls: int = None,
+                                             ):
 
-        tasks = [(gdf_polygon.iloc[i].geometry, year, clip) for i in range(len(gdf_polygon))]
+
+        gdf_polygon = self.read_data(filepath)
+        tile_to_polygons = self.tile_to_polygons(gdf_polygon)
+
+        tasks = [(tile_lat, tile_lon, polygons, year) for (tile_lat, tile_lon), polygons in tile_to_polygons.items()]
 
         output_file = Path(output_path)
         if output_file.exists():
@@ -171,28 +136,27 @@ class TESDataHandler:
         schema = None
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(self.fetch_polygon_extent, *t): t for t in tasks}
+            futures = {executor.submit(self.get_polygon_embd_from_tile, *t): t for t in tasks}
 
             for future in tqdm(as_completed(futures), total=len(futures), desc="Processing Polygons"):
                 res = future.result()
-                df = self.get_dataframe(res)
-                if df.empty:
+                
+                if res.empty():
                     continue
 
-                if cls:
-                    df['class'] = cls
-
                 # Convert to Arrow Table
-                table = pa.Table.from_pandas(df, preserve_index=False)
+                table = pa.Table.from_pandas(res, preserve_index=False)
 
                 if writer is None:  # first time, initialize
                     schema = table.schema
                     writer = pq.ParquetWriter(str(output_file), schema)
 
                 writer.write_table(table)
+                del res
 
         if writer:
             writer.close()
+
 
     def create_dataset_from_polygons_csv(self,
                                      filepath: str,
@@ -205,30 +169,30 @@ class TESDataHandler:
         """
         Process polygons efficiently, writing results incrementally.
         """
-        df_forest = gpd.read_file(filepath)
-        df_forest = df_forest.explode(index_parts=False).reset_index(drop=True)
-        gdf_polygon = df_forest.to_crs(4326)
+        gdf_polygon = self.read_data(filepath)
+        tile_to_polygons = self.tile_to_polygons(gdf_polygon)
 
-        tasks = [(gdf_polygon.iloc[i].geometry, year, clip) for i in range(len(gdf_polygon))]
+        tasks = [(tile_lat, tile_lon, polygons, year) for (tile_lat, tile_lon), polygons in tile_to_polygons.items()]
 
         output_file = Path(output_path)
         if output_file.exists():
-            logging.warning(f"{output_path} already exists. Appending results.")
+            logger.warning(f"{output_path} already exists. Overwriting.")
+            output_file.unlink()
+        writer = None
+        schema = None
 
-        # Process in batches (better for memory management)
-        with ThreadPoolExecutor(max_workers=max_workers) as executor, open(output_file, "a") as f_out:
-            futures = {executor.submit(self.fetch_polygon_extent, *t): t for t in tasks}
+        with ThreadPoolExecutor(max_workers=max_workers) as executorm, open(output_path, 'a') as f_out:
+            futures = {executorm.submit(self.get_polygon_embd_from_tile, *t): t for t in tasks}
 
             for future in tqdm(as_completed(futures), total=len(futures), desc="Processing Polygons"):
                 res = future.result()
-                df = self.get_dataframe(res)
-                if df.empty:
+                if res.empty():
                     continue
 
                 if cls:
-                    df['class'] = cls
+                    res['class'] = cls
 
-                df.to_csv(f_out, index=False, header=f_out.tell()==0)  # write header only once
+                res.to_csv(f_out, index=False, header=f_out.tell()==0)  # write header only once
 
         logging.info(f"Dataset saved to {output_path}")
         return pd.read_csv(output_path)  # final load to return dataframe
