@@ -61,7 +61,7 @@ class RF_Trainer:
         # Combine
         self.data = dd.concat([self.data, zero_rows_dd])
 
-        if self.config.downsample:
+        if self.config.preprocess.downsample:
             # Downsample each class to the size of the smallest class
             class_counts = self.data["class_"].value_counts().compute()
             min_count = class_counts.min()
