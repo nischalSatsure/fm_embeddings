@@ -141,7 +141,6 @@ class TESDataHandler:
             for future in tqdm(as_completed(futures), total=len(futures), desc="Processing Polygons"):
                 res = future.result()
                 
-                print(res)
                 if res.empty:
                     continue
 
