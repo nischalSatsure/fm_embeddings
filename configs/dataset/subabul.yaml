@@ -1,0 +1,5 @@
+filepath: data/MyDrive/Forestry/aef/2024/labels/species/subabul.geojson
+year: 2024
+output_path: data/MyDrive/Forestry/aef/2024/embeddings/species/subabul.parquet
+clip: True
+cls: null

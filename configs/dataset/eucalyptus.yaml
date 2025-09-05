@@ -1,0 +1,5 @@
+filepath: data/MyDrive/Forestry/aef/2024/labels/species/eucalyptus.geojson
+year: 2024
+output_path: /content/fm_embeddings/data/MyDrive/Forestry/aef/2024/embeddings/species/eucalyptus.parquet
+clip: True
+cls: null
