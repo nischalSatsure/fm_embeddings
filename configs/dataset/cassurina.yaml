@@ -1,0 +1,5 @@
+filepath: data/MyDrive/Forestry/aef/2024/labels/species/cassuarina.geojson
+year: 2024
+output_path: data/MyDrive/Forestry/aef/2024/embeddings/species/cassuarina.parquet
+clip: True
+cls: null

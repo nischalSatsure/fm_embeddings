@@ -1,7 +1,5 @@
-from operator import gt
 import pandas as pd
 import geopandas as gpd
-from mapminer import miners
 import pyproj
 from collections import defaultdict
 import xarray as xr
@@ -15,8 +13,6 @@ import logging
 import pyarrow as pa
 import pyarrow.parquet as pq
 from geotessera import GeoTessera
-
-from src.utils import create_grid
 
 
 logger = logging.getLogger(__name__)
@@ -108,7 +104,6 @@ class TESDataHandler:
             dfs.append(_df)
 
             del da_clipped, _df
-            gc.collect()
         del da
         return pd.concat(dfs, ignore_index=True)
 
@@ -179,8 +174,8 @@ class TESDataHandler:
             logger.warning(f"{output_path} already exists. Overwriting.")
             output_file.unlink()
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executorm, open(output_path, 'a') as f_out:
-            futures = {executorm.submit(self.get_polygon_embd_from_tile, *t): t for t in tasks}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor, open(output_path, 'a') as f_out:
+            futures = {executor.submit(self.get_polygon_embd_from_tile, *t): t for t in tasks}
 
             for future in tqdm(as_completed(futures), total=len(futures), desc="Processing Polygons"):
                 res = future.result()
