@@ -3,7 +3,7 @@ import pandas as pd
 import geopandas as gpd
 from mapminer import miners
 import pyproj
-from sklearn.base import defaultdict
+from collections import defaultdict
 import xarray as xr
 from shapely.ops import transform
 from shapely.geometry import Polygon
@@ -98,18 +98,19 @@ class TESDataHandler:
         return df
     
     def get_polygon_embd_from_tile(self, tile_lat, tile_lon, polygon_list, year):
-        df = None
+        dfs = []
         da = self.get_tile(tile_lat, tile_lon, year)
         for polygon in polygon_list:
 
             da_clipped = self.clip_to_geometry(da, polygon)
             _df = self.get_dataframe(da_clipped)
 
-            if df is None:
-                df = _df
-            else:
-                df = pd.concat([df, _df], ignore_index=True)
-        return df
+            dfs.append(_df)
+
+            del da_clipped, _df
+            gc.collect()
+        del da
+        return pd.concat(dfs, ignore_index=True)
 
     def create_dataset_from_polygons_parquet(self,
                                              filepath: str,
@@ -140,7 +141,8 @@ class TESDataHandler:
             for future in tqdm(as_completed(futures), total=len(futures), desc="Processing Polygons"):
                 res = future.result()
                 
-                if res.empty():
+                print(res)
+                if res.empty:
                     continue
 
                 # Convert to Arrow Table
@@ -177,15 +179,13 @@ class TESDataHandler:
         if output_file.exists():
             logger.warning(f"{output_path} already exists. Overwriting.")
             output_file.unlink()
-        writer = None
-        schema = None
 
         with ThreadPoolExecutor(max_workers=max_workers) as executorm, open(output_path, 'a') as f_out:
             futures = {executorm.submit(self.get_polygon_embd_from_tile, *t): t for t in tasks}
 
             for future in tqdm(as_completed(futures), total=len(futures), desc="Processing Polygons"):
                 res = future.result()
-                if res.empty():
+                if res.empty:
                     continue
 
                 if cls:
