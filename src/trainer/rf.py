@@ -61,6 +61,20 @@ class RF_Trainer:
         # Combine
         self.data = dd.concat([self.data, zero_rows_dd])
 
+        if self.config.downsample:
+            # Downsample each class to the size of the smallest class
+            class_counts = self.data["class_"].value_counts().compute()
+            min_count = class_counts.min()
+
+            dfs = []
+            for class_label in class_counts.index:
+                class_df = self.data[self.data["class_"] == class_label]
+                sampled_df = class_df.sample(n=min_count, random_state=42)
+                dfs.append(sampled_df)
+
+            self.data = dd.concat(dfs)
+            self.data = self.data.fillna(0)
+
     def split_data(self):
         """Split into train/test using dask-ml."""
         X = self.data.drop(columns=["class_"])
