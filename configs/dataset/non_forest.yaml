@@ -1,6 +1,5 @@
 filepath: ???
-year: 2024
+year: 2023
 output_path: ???
 clip: True
-cls: 0
-max_workers: 8
+cls: null
