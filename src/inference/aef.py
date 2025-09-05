@@ -245,6 +245,10 @@ class AEFPredictor:
         class_colors = {
                         0: "saddlebrown",  # background / no data / buildup / agriland
                         1: "forestgreen",  # forest 
+                        2: "gold",         # cropland
+                        3: "deepskyblue",  # water
+                        4: "gray",         # built-up
+                        5: "olive",        # shrubland
                     }
 
         # Create the image plot
@@ -256,7 +260,7 @@ class AEFPredictor:
             title='Forest Cover Prediction',
             tiles='EsriImagery',
             project=True,
-            clim=(0,1),
+            clim=(0,5),
         )
 
         if save_tiff:
