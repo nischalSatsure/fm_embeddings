@@ -48,8 +48,7 @@ class AEFPredictor:
             del preds
             gc.collect()
 
-            prediction_layer = roi.preds.rio.write_crs(roi.rio.crs)
-            prediction_layer = prediction_layer.clip(min=0, max=1).astype(np.uint8)
+            prediction_layer = roi.preds.rio.write_crs(roi.rio.crs).astype(np.uint8)
 
             return prediction_layer.transpose('y', 'x')
 
@@ -82,8 +81,7 @@ class AEFPredictor:
             del preds
             gc.collect()
 
-            prediction_layer = roi.preds.rio.write_crs(roi.rio.crs)
-            prediction_layer = prediction_layer.clip(min=0, max=1).astype(np.uint8)
+            prediction_layer = roi.preds.rio.write_crs(roi.rio.crs).astype(np.uint8)
 
             return prediction_layer.transpose('y', 'x')
 
