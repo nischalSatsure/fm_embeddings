@@ -117,7 +117,6 @@ class TESDataHandler:
                                              output_path: str,
                                              clip: bool,
                                              max_workers: int,
-                                             output_file: Path,
                                              cls: int = None,
                                              ):
 
@@ -127,10 +126,10 @@ class TESDataHandler:
 
         tasks = [(tile_lat, tile_lon, polygons, year) for (tile_lat, tile_lon), polygons in tile_to_polygons.items()]
 
-        output_file = Path(output_path)
-        if output_file.exists():
+        output_path = Path(output_path)
+        if output_path.exists():
             logger.warning(f"{output_path} already exists. Overwriting.")
-            output_file.unlink()
+            output_path.unlink()
 
         writer = None
         schema = None
@@ -149,7 +148,7 @@ class TESDataHandler:
 
                 if writer is None:  # first time, initialize
                     schema = table.schema
-                    writer = pq.ParquetWriter(str(output_file), schema)
+                    writer = pq.ParquetWriter(str(output_path), schema)
 
                 writer.write_table(table)
                 del res
