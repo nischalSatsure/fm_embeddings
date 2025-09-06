@@ -94,33 +94,29 @@ class TESDataHandler:
         return df
     
     def get_polygon_embd_from_tile(self, tile_lat, tile_lon, polygon_list, year):
-        dfs = []
         da = self.get_tile(tile_lat, tile_lon, year)
         for polygon in polygon_list:
-
             da_clipped = self.clip_to_geometry(da, polygon)
-            _df = self.get_dataframe(da_clipped)
-
-            dfs.append(_df)
-
-            del da_clipped, _df
+            df = self.get_dataframe(da_clipped)
+            yield df
+            del da_clipped, df
+            gc.collect()
         del da
-        return pd.concat(dfs, ignore_index=True)
+        gc.collect()
 
     def create_dataset_from_polygons_parquet(self,
-                                             filepath: str,
-                                             year: int,
-                                             output_path: str,
-                                             clip: bool,
-                                             max_workers: int,
-                                             cls: int = None,
-                                             ):
-
-
+                                            filepath: str,
+                                            year: int,
+                                            output_path: str,
+                                            clip: bool,
+                                            max_workers: int,
+                                            cls: int = None,
+                                            ):
         gdf_polygon = self.read_data(filepath)
         tile_to_polygons = self.tile_to_polygons(gdf_polygon)
 
-        tasks = [(tile_lat, tile_lon, polygons, year) for (tile_lat, tile_lon), polygons in tile_to_polygons.items()]
+        tasks = [(tile_lat, tile_lon, polygons, year) 
+                for (tile_lat, tile_lon), polygons in tile_to_polygons.items()]
 
         output_path = Path(output_path)
         if output_path.exists():
@@ -128,26 +124,24 @@ class TESDataHandler:
             output_path.unlink()
 
         writer = None
-        schema = None
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(self.get_polygon_embd_from_tile, *t): t for t in tasks}
 
             for future in tqdm(as_completed(futures), total=len(futures), desc="Processing Polygons"):
-                res = future.result()
-                
-                if res.empty:
-                    continue
+                for df in future.result():
+                    if df.empty:
+                        continue
 
-                # Convert to Arrow Table
-                table = pa.Table.from_pandas(res, preserve_index=False)
+                    # Write as small batches instead of one big table
+                    table = pa.Table.from_pandas(df, preserve_index=False)
 
-                if writer is None:  # first time, initialize
-                    schema = table.schema
-                    writer = pq.ParquetWriter(str(output_path), schema)
+                    if writer is None:
+                        writer = pq.ParquetWriter(str(output_path), table.schema)
 
-                writer.write_table(table)
-                del res
+                    writer.write_table(table)
+                    del df, table
+                    gc.collect()
 
         if writer:
             writer.close()
