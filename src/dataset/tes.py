@@ -110,6 +110,7 @@ class TESDataHandler:
                 del da_clipped, df
             except rioxarray.exceptions.NoDataInBounds:
                 # skip polygons outside tile
+                logger.error(f"Skipping Polygon in {tile_lat},{tile_lon}")
                 continue
             except Exception as e:
                 logger.error(f"Error clipping tile {tile_lat},{tile_lon}: {e}")
