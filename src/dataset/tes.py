@@ -12,6 +12,7 @@ from tqdm import tqdm
 import logging
 import pyarrow as pa
 import pyarrow.parquet as pq
+import rioxarray
 from geotessera import GeoTessera
 
 
@@ -93,14 +94,28 @@ class TESDataHandler:
         del da
         return df
     
+
     def get_polygon_embd_from_tile(self, tile_lat, tile_lon, polygon_list, year):
         da = self.get_tile(tile_lat, tile_lon, year)
         for polygon in polygon_list:
-            da_clipped = self.clip_to_geometry(da, polygon)
-            df = self.get_dataframe(da_clipped)
-            yield df
-            del da_clipped, df
-            gc.collect()
+            try:
+                da_clipped = self.clip_to_geometry(da, polygon)
+                if da_clipped is None or da_clipped.size == 0:
+                    continue
+
+                df = self.get_dataframe(da_clipped)
+                if df is not None and not df.empty:
+                    yield df
+
+                del da_clipped, df
+            except rioxarray.exceptions.NoDataInBounds:
+                # skip polygons outside tile
+                continue
+            except Exception as e:
+                logger.error(f"Error clipping tile {tile_lat},{tile_lon}: {e}")
+                continue
+            finally:
+                gc.collect()
         del da
         gc.collect()
 
